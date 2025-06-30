@@ -265,7 +265,13 @@ export default function Home() {
     if (field) {
       let resetOptions = {}
       if (field.type === "numeric") {
-        resetOptions = { minDigits: 1, maxDigits: 5 }
+        resetOptions = {
+          minDigits: 1,
+          maxDigits: 5,
+          numericType: "random",
+          startValue: 1,
+          stepValue: 1,
+        }
       } else if (field.type === "string") {
         resetOptions = { stringType: "fullname" }
       } else if (field.type === "custom") {
@@ -293,12 +299,20 @@ export default function Home() {
       case "autoincrement":
         return rowIndex + 1
       case "numeric":
-        const minDigits = field.options.minDigits || 1
-        const maxDigits = field.options.maxDigits || 5
-        const digits = Math.floor(Math.random() * (maxDigits - minDigits + 1)) + minDigits
-        const min = Math.pow(10, digits - 1)
-        const max = Math.pow(10, digits) - 1
-        return Math.floor(Math.random() * (max - min + 1)) + min
+        const numericType = field.options.numericType || "random"
+
+        if (numericType === "sequence") {
+          const startValue = field.options.startValue || 1
+          const stepValue = field.options.stepValue || 1
+          return startValue + rowIndex * stepValue
+        } else {
+          const minDigits = field.options.minDigits || 1
+          const maxDigits = field.options.maxDigits || 5
+          const digits = Math.floor(Math.random() * (maxDigits - minDigits + 1)) + minDigits
+          const min = Math.pow(10, digits - 1)
+          const max = Math.pow(10, digits) - 1
+          return Math.floor(Math.random() * (max - min + 1)) + min
+        }
       case "string":
         const stringType = field.options.stringType || "fullname"
         const dataArray = stringData[stringType] || stringData.fullname
@@ -969,14 +983,82 @@ export default function Home() {
                             />
                           </div>
                         </div>
+
+                        <div>
+                          <Label htmlFor={`numeric-type-${field.id}`}>Number Generation Type</Label>
+                          <Select
+                            value={field.options.numericType || "random"}
+                            onValueChange={(value) =>
+                              updateField(field.id, {
+                                ...field,
+                                options: { ...field.options, numericType: value },
+                              })
+                            }
+                          >
+                            <SelectTrigger id={`numeric-type-${field.id}`}>
+                              <SelectValue placeholder="Select generation type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="random">Random Digits</SelectItem>
+                              <SelectItem value="sequence">Sequential Numbers</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {field.options.numericType === "sequence" && (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor={`start-value-${field.id}`}>Start Value</Label>
+                              <Input
+                                id={`start-value-${field.id}`}
+                                type="number"
+                                value={field.options.startValue || 1}
+                                onChange={(e) =>
+                                  updateField(field.id, {
+                                    ...field,
+                                    options: {
+                                      ...field.options,
+                                      startValue: Number.parseInt(e.target.value) || 1,
+                                    },
+                                  })
+                                }
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`step-value-${field.id}`}>Step Value</Label>
+                              <Input
+                                id={`step-value-${field.id}`}
+                                type="number"
+                                value={field.options.stepValue || 1}
+                                onChange={(e) =>
+                                  updateField(field.id, {
+                                    ...field,
+                                    options: {
+                                      ...field.options,
+                                      stepValue: Number.parseInt(e.target.value) || 1,
+                                    },
+                                  })
+                                }
+                              />
+                            </div>
+                          </div>
+                        )}
+
                         <div className="text-sm text-muted-foreground">
                           Preview: {(() => {
-                            const minDigits = field.options.minDigits || 1
-                            const maxDigits = field.options.maxDigits || 5
-                            const digits = Math.floor(Math.random() * (maxDigits - minDigits + 1)) + minDigits
-                            const min = Math.pow(10, digits - 1)
-                            const max = Math.pow(10, digits) - 1
-                            return `${min} - ${max} (${digits} digits)`
+                            const numericType = field.options.numericType || "random"
+                            if (numericType === "sequence") {
+                              const startValue = field.options.startValue || 1
+                              const stepValue = field.options.stepValue || 1
+                              return `${startValue}, ${startValue + stepValue}, ${startValue + stepValue * 2}, ... (Sequential)`
+                            } else {
+                              const minDigits = field.options.minDigits || 1
+                              const maxDigits = field.options.maxDigits || 5
+                              const digits = Math.floor(Math.random() * (maxDigits - minDigits + 1)) + minDigits
+                              const min = Math.pow(10, digits - 1)
+                              const max = Math.pow(10, digits) - 1
+                              return `${min} - ${max} (${digits} digits, Random)`
+                            }
                           })()}
                         </div>
                         <div className="flex gap-2">
