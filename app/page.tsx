@@ -269,8 +269,16 @@ export default function Home() {
           minDigits: 1,
           maxDigits: 5,
           numericType: "random",
-          startValue: 1,
+          startValue: 0,
           stepValue: 1,
+        }
+      } else if (field.type === "autoincrement") {
+        resetOptions = {
+          autoType: "sequence",
+          startValue: 0,
+          stepValue: 1,
+          minValue: 0,
+          maxValue: 1000,
         }
       } else if (field.type === "string") {
         resetOptions = { stringType: "fullname" }
@@ -297,21 +305,38 @@ export default function Home() {
 
     switch (field.type) {
       case "autoincrement":
-        return rowIndex + 1
+        const autoType = field.options.autoType || "sequence"
+        if (autoType === "sequence") {
+          const startValue = field.options.startValue !== undefined ? field.options.startValue : 0
+          const stepValue = field.options.stepValue || 1
+          return startValue + rowIndex * stepValue
+        } else {
+          // Random autoincrement
+          const minValue = field.options.minValue !== undefined ? field.options.minValue : 0
+          const maxValue = field.options.maxValue !== undefined ? field.options.maxValue : 1000
+          return Math.floor(Math.random() * (maxValue - minValue + 1)) + minValue
+        }
+
       case "numeric":
         const numericType = field.options.numericType || "random"
 
         if (numericType === "sequence") {
-          const startValue = field.options.startValue || 1
+          const startValue = field.options.startValue !== undefined ? field.options.startValue : 0
           const stepValue = field.options.stepValue || 1
           return startValue + rowIndex * stepValue
         } else {
           const minDigits = field.options.minDigits || 1
           const maxDigits = field.options.maxDigits || 5
           const digits = Math.floor(Math.random() * (maxDigits - minDigits + 1)) + minDigits
-          const min = Math.pow(10, digits - 1)
-          const max = Math.pow(10, digits) - 1
-          return Math.floor(Math.random() * (max - min + 1)) + min
+
+          // Allow starting from 0 for single digit
+          if (digits === 1) {
+            return Math.floor(Math.random() * 10) // 0-9
+          } else {
+            const min = Math.pow(10, digits - 1)
+            const max = Math.pow(10, digits) - 1
+            return Math.floor(Math.random() * (max - min + 1)) + min
+          }
         }
       case "string":
         const stringType = field.options.stringType || "fullname"
@@ -941,6 +966,131 @@ export default function Home() {
                     </div>
 
                     {/* Custom field options */}
+                    {field.type === "autoincrement" && (
+                      <div className="mt-4 space-y-4">
+                        <div>
+                          <Label htmlFor={`auto-type-${field.id}`}>Auto Increment Type</Label>
+                          <Select
+                            value={field.options.autoType || "sequence"}
+                            onValueChange={(value) =>
+                              updateField(field.id, {
+                                ...field,
+                                options: { ...field.options, autoType: value },
+                              })
+                            }
+                          >
+                            <SelectTrigger id={`auto-type-${field.id}`}>
+                              <SelectValue placeholder="Select auto increment type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="sequence">Sequential Numbers</SelectItem>
+                              <SelectItem value="random">Random Numbers</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {field.options.autoType === "sequence" ? (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor={`auto-start-value-${field.id}`}>Start Value</Label>
+                              <Input
+                                id={`auto-start-value-${field.id}`}
+                                type="number"
+                                value={field.options.startValue !== undefined ? field.options.startValue : 0}
+                                onChange={(e) =>
+                                  updateField(field.id, {
+                                    ...field,
+                                    options: {
+                                      ...field.options,
+                                      startValue: Number.parseInt(e.target.value) || 0,
+                                    },
+                                  })
+                                }
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`auto-step-value-${field.id}`}>Step Value</Label>
+                              <Input
+                                id={`auto-step-value-${field.id}`}
+                                type="number"
+                                value={field.options.stepValue || 1}
+                                onChange={(e) =>
+                                  updateField(field.id, {
+                                    ...field,
+                                    options: {
+                                      ...field.options,
+                                      stepValue: Number.parseInt(e.target.value) || 1,
+                                    },
+                                  })
+                                }
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor={`auto-min-value-${field.id}`}>Min Value</Label>
+                              <Input
+                                id={`auto-min-value-${field.id}`}
+                                type="number"
+                                value={field.options.minValue !== undefined ? field.options.minValue : 0}
+                                onChange={(e) =>
+                                  updateField(field.id, {
+                                    ...field,
+                                    options: {
+                                      ...field.options,
+                                      minValue: Number.parseInt(e.target.value) || 0,
+                                    },
+                                  })
+                                }
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`auto-max-value-${field.id}`}>Max Value</Label>
+                              <Input
+                                id={`auto-max-value-${field.id}`}
+                                type="number"
+                                value={field.options.maxValue !== undefined ? field.options.maxValue : 1000}
+                                onChange={(e) =>
+                                  updateField(field.id, {
+                                    ...field,
+                                    options: {
+                                      ...field.options,
+                                      maxValue: Number.parseInt(e.target.value) || 1000,
+                                    },
+                                  })
+                                }
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="text-sm text-muted-foreground">
+                          Preview: {(() => {
+                            const autoType = field.options.autoType || "sequence"
+                            if (autoType === "sequence") {
+                              const startValue = field.options.startValue !== undefined ? field.options.startValue : 0
+                              const stepValue = field.options.stepValue || 1
+                              return `${startValue}, ${startValue + stepValue}, ${startValue + stepValue * 2}, ... (Sequential)`
+                            } else {
+                              const minValue = field.options.minValue !== undefined ? field.options.minValue : 0
+                              const maxValue = field.options.maxValue !== undefined ? field.options.maxValue : 1000
+                              return `${minValue} - ${maxValue} (Random Range)`
+                            }
+                          })()}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => applyFieldChanges(field.id)}>
+                            Apply Changes
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => resetFieldChanges(field.id)}>
+                            <RotateCcw className="mr-2 h-4 w-4" />
+                            Reset
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
                     {field.type === "numeric" && (
                       <div className="mt-4 space-y-4">
                         <div className="grid grid-cols-2 gap-4">
@@ -1012,13 +1162,13 @@ export default function Home() {
                               <Input
                                 id={`start-value-${field.id}`}
                                 type="number"
-                                value={field.options.startValue || 1}
+                                value={field.options.startValue || 0}
                                 onChange={(e) =>
                                   updateField(field.id, {
                                     ...field,
                                     options: {
                                       ...field.options,
-                                      startValue: Number.parseInt(e.target.value) || 1,
+                                      startValue: Number.parseInt(e.target.value) || 0,
                                     },
                                   })
                                 }
@@ -1048,16 +1198,20 @@ export default function Home() {
                           Preview: {(() => {
                             const numericType = field.options.numericType || "random"
                             if (numericType === "sequence") {
-                              const startValue = field.options.startValue || 1
+                              const startValue = field.options.startValue !== undefined ? field.options.startValue : 0
                               const stepValue = field.options.stepValue || 1
                               return `${startValue}, ${startValue + stepValue}, ${startValue + stepValue * 2}, ... (Sequential)`
                             } else {
                               const minDigits = field.options.minDigits || 1
                               const maxDigits = field.options.maxDigits || 5
-                              const digits = Math.floor(Math.random() * (maxDigits - minDigits + 1)) + minDigits
-                              const min = Math.pow(10, digits - 1)
-                              const max = Math.pow(10, digits) - 1
-                              return `${min} - ${max} (${digits} digits, Random)`
+                              if (minDigits === 1) {
+                                return `0 - 9 (1 digit), 10 - 99 (2 digits), etc. (Random)`
+                              } else {
+                                const digits = Math.floor(Math.random() * (maxDigits - minDigits + 1)) + minDigits
+                                const min = Math.pow(10, digits - 1)
+                                const max = Math.pow(10, digits) - 1
+                                return `${min} - ${max} (${digits} digits, Random)`
+                              }
                             }
                           })()}
                         </div>
